@@ -364,20 +364,28 @@ void http_conn::unmap()
 
 bool http_conn::write()
 {
-    int temp = 0;
     int bytes_have_send = 0;
-    int bytes_to_send = m_write_idx;
+    int bytes_to_send = m_iv[0].iov_len + ( m_iv_count ? m_iv[1].iov_len : 0 );
+
     if ( bytes_to_send == 0 )
     {
-        modfd( m_epollfd, m_sockfd, EPOLLIN );
-        init();
-        return true;
+        if( m_linger )
+        {
+            init();
+            modfd( m_epollfd, m_sockfd, EPOLLIN );
+            return true;
+        }
+        else
+        {
+            modfd( m_epollfd, m_sockfd, EPOLLIN );
+            return false;
+        }
     }
 
     while( 1 )
     {
-        temp = writev( m_sockfd, m_iv, m_iv_count );
-        if ( temp <= -1 )
+        bytes_have_send = writev( m_sockfd, m_iv, m_iv_count );
+        if ( bytes_have_send <= -1 )
         {
             if( errno == EAGAIN )
             {
@@ -388,9 +396,20 @@ bool http_conn::write()
             return false;
         }
 
-        bytes_to_send -= temp;
-        bytes_have_send += temp;
-        if ( bytes_to_send <= bytes_have_send )
+        if( bytes_have_send >= m_iv[0].iov_len ){
+            if( m_iv_count ){
+                m_iv[1].iov_base = m_iv[1].iov_base + ( bytes_have_send - m_iv[0].iov_len );
+                m_iv[1].iov_len = m_iv[1].iov_len - ( bytes_have_send - m_iv[0].iov_len );
+            }
+            m_iv[0].iov_len = 0;
+        }else{
+            m_iv[0].iov_base = m_iv[0].iov_base + bytes_have_send;
+            m_iv[0].iov_len = m_iv[0].iov_len - bytes_have_send;
+        }
+        
+        bytes_to_send -= bytes_have_send;
+
+        if ( bytes_to_send <= 0 )
         {
             unmap();
             if( m_linger )
@@ -540,7 +559,7 @@ bool http_conn::process_write( HTTP_CODE ret )
 void http_conn::process()
 {
     HTTP_CODE read_ret = process_read();
-    if ( read_ret == NO_REQUEST )
+    if ( read_ret == NO_REQUEST )   //HTTP报文未接受完毕
     {
         modfd( m_epollfd, m_sockfd, EPOLLIN );
         return;
