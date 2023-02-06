@@ -90,9 +90,9 @@ void http_conn::init()
     m_checked_idx = 0;
     m_read_idx = 0;
     m_write_idx = 0;
-    memset( m_read_buf, '\0', READ_BUFFER_SIZE );
-    memset( m_write_buf, '\0', WRITE_BUFFER_SIZE );
-    memset( m_real_file, '\0', FILENAME_LEN );
+    //memset( m_read_buf, '\0', READ_BUFFER_SIZE );
+    //memset( m_write_buf, '\0', WRITE_BUFFER_SIZE );
+    //memset( m_real_file, '\0', FILENAME_LEN );
 }
 
 http_conn::LINE_STATUS http_conn::parse_line()
@@ -332,6 +332,8 @@ http_conn::HTTP_CODE http_conn::do_request()
     strcpy( m_real_file, doc_root );
     int len = strlen( doc_root );
     strncpy( m_real_file + len, m_url, FILENAME_LEN - len - 1 );
+    len += strlen( m_url );
+    m_real_file[ ( FILENAME_LEN-1<=len )?( FILENAME_LEN-1 ):len  ]='\0';
     if ( stat( m_real_file, &m_file_stat ) < 0 )    //是否存在该目录或文件夹
     {
         return NO_RESOURCE;
@@ -398,12 +400,12 @@ bool http_conn::write()
 
         if( bytes_have_send >= m_iv[0].iov_len ){
             if( m_iv_count ){
-                m_iv[1].iov_base = m_iv[1].iov_base + ( bytes_have_send - m_iv[0].iov_len );
+                m_iv[1].iov_base = (char*)m_iv[1].iov_base + ( bytes_have_send - m_iv[0].iov_len );
                 m_iv[1].iov_len = m_iv[1].iov_len - ( bytes_have_send - m_iv[0].iov_len );
             }
             m_iv[0].iov_len = 0;
         }else{
-            m_iv[0].iov_base = m_iv[0].iov_base + bytes_have_send;
+            m_iv[0].iov_base = (char*)m_iv[0].iov_base + bytes_have_send;
             m_iv[0].iov_len = m_iv[0].iov_len - bytes_have_send;
         }
         
@@ -435,8 +437,8 @@ bool http_conn::add_response( const char* format, ... )
     }
     va_list arg_list;
     va_start( arg_list, format );
-    int len = vsnprintf( m_write_buf + m_write_idx, WRITE_BUFFER_SIZE - 1 - m_write_idx, format, arg_list );
-    if( len >= ( WRITE_BUFFER_SIZE - 1 - m_write_idx ) )
+    int len = vsnprintf( m_write_buf + m_write_idx, WRITE_BUFFER_SIZE - m_write_idx, format, arg_list );
+    if( len >= ( WRITE_BUFFER_SIZE - m_write_idx ) )
     {
         return false;
     }
@@ -452,9 +454,10 @@ bool http_conn::add_status_line( int status, const char* title )
 
 bool http_conn::add_headers( int content_len )
 {
-    add_content_length( content_len );
-    add_linger();
-    add_blank_line();
+    if( ! add_content_length( content_len ) ) return false;
+    if( ! add_linger() ) return false;
+    if( !add_blank_line() ) return false;
+    return true;
 }
 
 bool http_conn::add_content_length( int content_len )

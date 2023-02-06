@@ -10,7 +10,7 @@
 #include <cassert>
 #include <sys/epoll.h>
 
-#include "locker/locker.h"
+#include "lock/lock.h"
 #include "threadpool/threadpool.h"
 #include "http/http_conn.h"
 
@@ -56,7 +56,7 @@ int main( int argc, char* argv[] )
     threadpool< http_conn >* pool = NULL;
     try
     {
-        pool = new threadpool< http_conn >;
+        pool = new threadpool< http_conn >( 1,10000 );  //线程数量与请求队列容量
     }
     catch( ... )
     {

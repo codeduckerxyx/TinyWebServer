@@ -6,7 +6,7 @@
 #include <exception>
 #include <pthread.h>
 
-#include "../locker/locker.h"
+#include "../lock/lock.h"
 
 /* 线程池类，定义为模板类 */
 template< typename T >

@@ -18,12 +18,12 @@
 #include <sys/mman.h>
 #include <stdarg.h>
 #include <errno.h>
-#include "../locker/locker.h"
+#include "../lock/lock.h"
 
 class http_conn
 {
 public:
-    static const int FILENAME_LEN = 200;
+    static const int FILENAME_LEN = 256;
     static const int READ_BUFFER_SIZE = 2048;
     static const int WRITE_BUFFER_SIZE = 1024;
     enum METHOD { GET = 0, POST, HEAD, PUT, DELETE, TRACE, OPTIONS, CONNECT, PATCH };
