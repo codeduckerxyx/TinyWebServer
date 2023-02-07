@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Login Page</title>
+    <style>
+      /* Add some styling to make the page look good */
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: lightgray;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+      }
+      .container {
+        width: 400px;
+        background-color: white;
+        padding: 40px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px lightgray;
+        text-align: center;
+      }
+      h1 {
+        margin-bottom: 30px;
+      }
+      input[type="text"],
+      input[type="password"] {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 20px;
+        border: none;
+        border-radius: 5px;
+        font-size: 16px;
+      }
+      input[type="submit"] {
+        width: 100%;
+        padding: 10px;
+        background-color: lightblue;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        font-size: 16px;
+        cursor: pointer;
+      }
+      a {
+        display: inline-block;
+        margin-top: 20px;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Login</h1>
+      <form action="#">
+        <input type="text" placeholder="Username">
+        <input type="password" placeholder="Password">
+        <input type="submit" value="Login">
+      </form>
+      <a href="#">Not a member? Register</a>
+    </div>
+  </body>
+</html>
