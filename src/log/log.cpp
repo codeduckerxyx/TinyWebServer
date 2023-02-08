@@ -12,6 +12,7 @@ Log::Log()
 {
     m_log_stop = true;
     log_fp = -1;
+    log_bufsize = 0;
 }
 
 Log::~Log()
@@ -19,12 +20,25 @@ Log::~Log()
     if( log_fp != -1 ){
         close( log_fp );
     }
+    for(auto i:task_queue){
+        delete [] i.ptr;
+    }
+    for(auto i:log_buf_queue){
+        delete [] i;
+    }
 }
 
-void Log::write_log(LOGLEVEL level,char* log_buf,int log_buf_size,const char *format, ...)
+void Log::write_log(LOGLEVEL level,const char *format, ...)
 {
     
+    int log_buf_size = log_bufsize;
     int log_write_idx = 0;  //日志写缓冲坐标偏移
+    char* log_buf;
+
+    log_mutex.lock();
+    log_buf_queue.front();
+    log_buf_queue.pop_front();
+    log_mutex.unlock();
 
     switch(level)
     {
@@ -95,6 +109,11 @@ void Log::write_log(LOGLEVEL level,char* log_buf,int log_buf_size,const char *fo
     char* line_log = new char[ log_write_idx + 1 ];
     strncpy( line_log, log_buf, log_write_idx );
     line_log[ log_write_idx ] = '\n';
+
+    log_mutex.lock();
+    log_buf_queue.push_front( log_buf );
+    log_mutex.unlock();
+
     task_mutex.lock();
     task_queue.push_back( task_node{ line_log, log_write_idx + 1 } );
     task_mutex.unlock();
@@ -142,7 +161,7 @@ void* Log::worker(void* arg)
     get_instance()->run_log();
 }
 
-Log* Log::init( char* dirname, char *logname ){
+void Log::init( char* dirname, char *logname, int thread_number, int buf_size ){
     Log* m_log = get_instance();
     strcpy( m_log->dir_name,dirname );
     strcpy( m_log->log_name,logname );
@@ -160,6 +179,11 @@ Log* Log::init( char* dirname, char *logname ){
 
     m_log->log_fp = open( full_name, O_APPEND | O_CREAT | O_WRONLY );
     delete [] full_name;
-    return m_log;
+    
+    for( int i = 0; i< thread_number ; ++i ){
+        char* log_buf = new char[buf_size];
+        m_log->log_buf_queue.push_back( log_buf );
+    }
+    
 }
 

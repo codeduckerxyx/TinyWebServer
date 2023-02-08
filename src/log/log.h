@@ -11,35 +11,6 @@
 
 #include "../lock/lock.h"
 
-#ifdef PRINTF_ERROR
-    #define LOG_ERROR(format, ...) if( ! Log::get_instance()->m_log_stop ) {Log::get_instance()->write_log(LOG_LEVEL_ERROR,log_buf,log_buf_size, format, ##__VA_ARGS__);}
-#else
-    #define LOG_ERROR(format, ...)  
-#endif
-
-#ifdef PRINTF_WARNING
-    #define LOG_WARN(format, ...) if( ! Log::get_instance()->m_log_stop ) {Log::get_instance()->write_log(LOG_LEVEL_WARNING,log_buf,log_buf_size, format, ##__VA_ARGS__);}
-#else
-    #define LOG_WARN(format, ...)  
-#endif
-
-#ifdef PRINTF_INFO
-    #define LOG_INFO(format, ...) if( ! Log::get_instance()->m_log_stop ) {Log::get_instance()->write_log(LOG_LEVEL_INFO,log_buf,log_buf_size, format, ##__VA_ARGS__);}
-#else
-    #define LOG_INFO(format, ...)  
-#endif
-
-#ifdef PRINTF_DEBUG
-    #define LOG_DEBUG(format, ...) if( ! Log::get_instance()->m_log_stop ) {Log::get_instance()->write_log(LOG_LEVEL_DEBUG,log_buf,log_buf_size, format, ##__VA_ARGS__);}
-#else
-    #define LOG_DEBUG(format, ...)  
-#endif
-
-#ifdef PRINTF_TRACE
-    #define LOG_TRACE(format, ...) if( ! Log::get_instance()->m_log_stop ) {Log::get_instance()->write_log(LOG_LEVEL_TRACE,log_buf,log_buf_size, format, ##__VA_ARGS__);}
-#else
-    #define LOG_TRACE(format, ...)  
-#endif 
 
 class Log{
     public:
@@ -59,6 +30,7 @@ class Log{
             LOG_TARGET_FILE
         };
     private:
+        
         typedef struct
         {
             char* ptr;
@@ -66,6 +38,11 @@ class Log{
         }task_node;
         locker task_mutex;
         std::list< task_node > task_queue;
+        
+        locker log_mutex;
+        int log_bufsize;
+        std::list< char* > log_buf_queue;
+
         char dir_name[256];     //路径名
         char log_name[256];     //文件名
         int log_fp;
@@ -79,7 +56,7 @@ class Log{
     public:
         virtual ~Log();
         pthread_t get_pid();
-        void write_log(LOGLEVEL level,char* log_buf,int log_buf_size,const char *format, ...); //异步写函数
+        void write_log(LOGLEVEL level,const char *format, ...); //异步写函数
         void open_log();
         void close_log();
         //C++11后，使用局部变量懒汉不用加锁
@@ -88,7 +65,37 @@ class Log{
             static Log instance;
             return &instance;
         }
-        static Log* init( char* dirname, char *logname );
+        static void init( char* dirname, char *logname, int thread_number, int buf_size );
 };
+
+#ifdef PRINTF_ERROR
+    #define LOG_ERROR(format, ...) if( ! Log::get_instance()->m_log_stop ) {Log::get_instance()->write_log(LOG_LEVEL_ERROR,format, ##__VA_ARGS__);}
+#else
+    #define LOG_ERROR(format, ...)  
+#endif
+
+#ifdef PRINTF_WARNING
+    #define LOG_WARN(format, ...) if( ! Log::get_instance()->m_log_stop ) {Log::get_instance()->write_log(LOG_LEVEL_WARNING, format, ##__VA_ARGS__);}
+#else
+    #define LOG_WARN(format, ...)  
+#endif
+
+#ifdef PRINTF_INFO
+    #define LOG_INFO(format, ...) if( ! Log::get_instance()->m_log_stop ) {Log::get_instance()->write_log(LOG_LEVEL_INFO, format, ##__VA_ARGS__);}
+#else
+    #define LOG_INFO(format, ...)  
+#endif
+
+#ifdef PRINTF_DEBUG
+    #define LOG_DEBUG(format, ...) if( ! Log::get_instance()->m_log_stop ) {Log::get_instance()->write_log(LOG_LEVEL_DEBUG, format, ##__VA_ARGS__);}
+#else
+    #define LOG_DEBUG(format, ...)  
+#endif
+
+#ifdef PRINTF_TRACE
+    #define LOG_TRACE(format, ...) if( ! Log::get_instance()->m_log_stop ) {Log::get_instance()->write_log(LOG_LEVEL_TRACE, format, ##__VA_ARGS__);}
+#else
+    #define LOG_TRACE(format, ...)  
+#endif 
 
 #endif
