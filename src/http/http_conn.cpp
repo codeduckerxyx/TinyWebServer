@@ -15,12 +15,23 @@ const char* doc_root = "/home/ubuntu/web_server/root";
 
 int http_conn::m_user_count = 0;
 int http_conn::m_epollfd = -1;
+int http_conn::timeslot = 0;
+timer_set* http_conn::timer = NULL;
+
+http_conn::http_conn(){
+    m_timer = new http_connect_timer;
+    m_timer->user_data = this;
+}
+
+http_conn::~http_conn(){
+    delete m_timer;
+}
 
 void http_conn::close_conn( bool real_close )
 {
     if( real_close && ( m_sockfd != -1 ) )
     {
-        //modfd( m_epollfd, m_sockfd, EPOLLIN );
+        del_timer();
         Utils::removefd( m_epollfd, m_sockfd );
         m_sockfd = -1;
         m_user_count--;
@@ -40,6 +51,10 @@ void http_conn::init( int sockfd, const sockaddr_in& addr )
     Utils::addfd( m_epollfd, sockfd, true );
     m_user_count++;
     
+    m_timer->timer_id = m_sockfd;
+    m_timer->expire = time(NULL);
+    add_timer( timeslot*4 );
+
     init();
     LOG_TRACE( "ip %s:%d connect", inet_ntoa(m_address.sin_addr),m_address.sin_port );
 }
@@ -125,6 +140,7 @@ bool http_conn::read()
 
         m_read_idx += bytes_read;
     }
+    increase_timer( timeslot*3 );
     return true;
 }
 
@@ -529,6 +545,7 @@ bool http_conn::process_write( HTTP_CODE ret )
 
 void http_conn::process()
 {
+    m_linger = true;
     HTTP_CODE read_ret = process_read();
     if ( read_ret == NO_REQUEST )   //HTTP报文未接受完毕
     {
@@ -544,4 +561,16 @@ void http_conn::process()
     }
 
     Utils::modfd( m_epollfd, m_sockfd, EPOLLOUT );
+}
+
+void http_conn::increase_timer(int time_interval){
+    time_t newtime = time(NULL) + time_interval;
+    timer->adjust_timer( m_timer, newtime );
+}
+void http_conn::add_timer(int time_interval){
+    m_timer->expire = time(NULL) + time_interval;
+    timer->add_timer( m_timer );
+}
+void http_conn::del_timer(){
+    timer->del_timer( m_timer );
 }

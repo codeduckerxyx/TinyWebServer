@@ -1,9 +1,6 @@
 #include "server.h"
 
-WebServer::WebServer()
-{
-    
-}
+WebServer::WebServer(){}
 
 WebServer::~WebServer()
 {
@@ -17,15 +14,14 @@ WebServer::~WebServer()
 
 void WebServer::init(){
     users = new http_conn[ MAX_FD ];
-    LOG_ERROR("user new failed");
     assert( users );
+    http_conn::timeslot = TIMESLOT;
+    http_conn::timer = &timer;
 
     events = new epoll_event[ MAX_EVENT_NUMBER ];
-    LOG_ERROR("events new failed");
     assert( events );
 
     signals = new char[1024];
-    LOG_ERROR("signals new failed");
     assert( signals );
     
     m_stop_server = false;
@@ -58,7 +54,9 @@ void WebServer::init_log( bool log_open, const char* dirname, const char* lognam
 }
 
 
-void WebServer::init_timer(){}
+void WebServer::init_timer(){
+    
+}
 
 
 void WebServer::deal_client_connection_handler(){
@@ -83,10 +81,25 @@ void WebServer::deal_sigal_handler(){
     if( ret <= 0 ){
         return;
     }else{
+        bool is_sigalrm = false;
         for( int i = 0; i < ret; ++i ){
             switch( signals[i] ){
-
+                case SIGALRM:{
+                    is_sigalrm = true;
+                    break;
+                }
+                case SIGTERM:{
+                    m_stop_server = true;
+                    break;
+                }
+                default:{}
             }
+        }
+        if( is_sigalrm ){
+            LOG_INFO("start tick");
+            timer.tick();
+            alarm(TIMESLOT);
+            LOG_INFO("end tick");
         }
     }
 }
@@ -142,8 +155,10 @@ void WebServer::eventLoop(){
     Utils::setnonblocking(Utils::sig_pipefd[1]);
     Utils::addfd( epollfd, Utils::sig_pipefd[0], false );
 
+    alarm(TIMESLOT);
+
     Utils::addsig(SIGPIPE, SIG_IGN);
-    //utils.addsig(SIGALRM, Utils::sig_handler, false);
+    Utils::addsig(SIGALRM, Utils::sig_handler, false);
     Utils::addsig(SIGTERM, Utils::sig_handler, false);
 
     LOG_INFO("Server started successfully");

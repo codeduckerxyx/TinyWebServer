@@ -56,6 +56,7 @@ class WebServer{
         epoll_event* events;
 
         /* 定时器 */
+        timer_set timer;
 
         /* 数据库 */
 

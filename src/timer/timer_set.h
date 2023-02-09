@@ -25,25 +25,25 @@ class util_timer_node
         virtual void process() = 0;
 };
 
-struct client_data
-{
-    sockaddr_in address;
-    int sockfd;
-    char buf[ BUFFER_SIZE ];
-    http_timer* timer;
-};
+// struct client_data
+// {
+//     sockaddr_in address;
+//     int sockfd;
+//     char buf[ BUFFER_SIZE ];
+//     http_timer* timer;
+// };
 
-class http_timer : public util_timer_node
-{
-    public:
-        client_data* user_data;
-        void (*cb_func)(client_data*);  /* 回调函数 */
+// class http_timer : public util_timer_node
+// {
+//     public:
+//         client_data* user_data;
+//         void (*cb_func)(client_data*);  /* 回调函数 */
 
-        void process()  /* 每个具体的timer必须实现process方法，以后再有时间再回来改成虚函数继承的结构 */
-        {
-            cb_func( user_data );
-        }
-};
+//         void process()  /* 每个具体的timer必须实现process方法  */
+//         {
+//             cb_func( user_data );
+//         }
+// };
 
 struct set_comp
 {
@@ -60,22 +60,14 @@ class timer_set
         std::set<util_timer_node*,set_comp> set;
     public:
         timer_set(){}
-        ~timer_set()
-        {
-            for(util_timer_node* tmp:set){
-                delete tmp;
-            }
-        }
+        ~timer_set(){}
         /* 添加定时任务 */
         void add_timer( util_timer_node* timer ){
             set.insert( timer );
         }
         /* 删除定时任务 */
         void del_timer( util_timer_node* timer ){
-            auto tmp = set.lower_bound( timer );
-            util_timer_node* ptr = *tmp;
-            set.erase( tmp );
-            delete ptr;
+            set.erase( set.lower_bound( timer ) );
         }
         /* 调整任务结束时间 */
         void adjust_timer( util_timer_node* timer,time_t new_end_time ){
@@ -88,12 +80,15 @@ class timer_set
 
         void tick(){
             time_t cur = time( NULL );
+
+            for(auto x:set){
+                LOG_TRACE("%d %d",x->timer_id,x->expire );
+            }
+
             while( !set.empty() ){
                 util_timer_node* ptr = *set.begin();
                 if( ptr->expire <= cur ){
-                    set.erase( set.begin() );
                     ptr->process();
-                    delete ptr;
                 }else{
                     break;
                 }

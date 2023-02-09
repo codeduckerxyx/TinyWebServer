@@ -18,9 +18,13 @@
 #include <sys/mman.h>
 #include <stdarg.h>
 #include <errno.h>
+
 #include "../lock/lock.h"
 #include "../utils/utils.h"
 #include "../log/log.h"
+#include "../timer/timer_set.h"
+
+class http_connect_timer;
 
 class http_conn
 {
@@ -34,8 +38,8 @@ public:
     enum LINE_STATUS { LINE_OK = 0, LINE_BAD, LINE_OPEN };
 
 public:
-    http_conn(){}
-    ~http_conn(){}
+    http_conn();
+    ~http_conn();
 
 public:
     void init( int sockfd, const sockaddr_in& addr );
@@ -44,6 +48,9 @@ public:
     bool read();
     bool write();
 
+    void increase_timer( int time_interval );
+    void add_timer( int time_interval );
+    void del_timer( );
 private:
     void init();
     HTTP_CODE process_read();
@@ -68,10 +75,14 @@ private:
 public:
     static int m_epollfd;
     static int m_user_count;
+    static int timeslot;
+    static timer_set* timer;
 
 private:
     int m_sockfd;
     sockaddr_in m_address;
+    
+    http_connect_timer* m_timer;
 
     char m_read_buf[ READ_BUFFER_SIZE ];
     int m_read_idx;
@@ -94,6 +105,16 @@ private:
     struct stat m_file_stat;
     struct iovec m_iv[2];
     int m_iv_count;
+};
+
+class http_connect_timer : public util_timer_node
+{
+    public:
+        http_conn* user_data;
+        void process()
+        {
+            user_data->close_conn();
+        }
 };
 
 #endif
