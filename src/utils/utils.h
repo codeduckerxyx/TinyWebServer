@@ -25,6 +25,7 @@ class Utils{
         static void addfd( int epollfd, int fd, bool one_shot );
         static void removefd( int epollfd, int fd );
         static int setnonblocking( int fd );
+        static void modfd( int epollfd, int fd, int ev );
 };
 
 #endif

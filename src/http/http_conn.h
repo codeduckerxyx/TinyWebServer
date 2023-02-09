@@ -19,6 +19,7 @@
 #include <stdarg.h>
 #include <errno.h>
 #include "../lock/lock.h"
+#include "../utils/utils.h"
 
 class http_conn
 {

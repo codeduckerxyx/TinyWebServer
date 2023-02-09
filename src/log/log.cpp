@@ -161,7 +161,7 @@ void* Log::worker(void* arg)
     get_instance()->run_log();
 }
 
-void Log::init( char* dirname, char *logname, int thread_number, int buf_size ){
+void Log::init(const char* dirname,const char *logname, int thread_number, int buf_size ){
     Log* m_log = get_instance();
     strcpy( m_log->dir_name,dirname );
     strcpy( m_log->log_name,logname );

@@ -65,7 +65,7 @@ class Log{
             static Log instance;
             return &instance;
         }
-        static void init( char* dirname, char *logname, int thread_number, int buf_size );
+        static void init(const char* dirname,const char *logname, int thread_number, int buf_size );
 };
 
 #ifdef PRINTF_ERROR

@@ -39,7 +39,7 @@ void WebServer::init_thread_pool( int thread_number, int max_requests )
 }
 
 
-void WebServer::init_log( bool log_stop, char* dirname, char *logname, int log_bufsize)
+void WebServer::init_log( bool log_stop, const char* dirname, const char* logname, int log_bufsize)
 {
     m_log_stop = log_stop;
     if( m_log_stop == false ){
@@ -49,9 +49,7 @@ void WebServer::init_log( bool log_stop, char* dirname, char *logname, int log_b
 }
 
 
-void WebServer::init_timer(){
-
-}
+void WebServer::init_timer(){}
 
 
 void WebServer::deal_client_connection_handler(){

@@ -2,14 +2,15 @@
 
 Utils::Utils()
 {
-    int ret = socketpair( PF_UNIX, SOCK_STREAM, 0, sig_pipefd );
+    int ret = socketpair( PF_UNIX, SOCK_STREAM, 0, Utils::sig_pipefd );
     assert( ret != -1 );
-    Utils::setnonblocking( sig_pipefd[1] );
 }
 
 Utils::~Utils(){
 
 }
+
+int Utils::sig_pipefd[2];
 
 int Utils::setnonblocking( int fd )
 {
@@ -23,7 +24,7 @@ void Utils::sig_handler(int sig)
 {
     int save_errno = errno; //保存原有errno
     int msg = sig;
-    send(sig_pipefd[1], (char *)&msg, 1, 0);  //直接传一个char是因为信号值都小于等于64的，有用的只有前8位
+    send(Utils::sig_pipefd[1], (char *)&msg, 1, 0);  //直接传一个char是因为信号值都小于等于64的，有用的只有前8位
     errno = save_errno;
 }
 
@@ -67,7 +68,7 @@ void Utils::removefd( int epollfd, int fd )
     close( fd );
 }
 
-void modfd( int epollfd, int fd, int ev )
+void Utils::modfd( int epollfd, int fd, int ev )
 {
     epoll_event event;
     event.data.fd = fd;
