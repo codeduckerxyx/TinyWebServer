@@ -18,7 +18,8 @@
 int main()
 {
     WebServer* server = new WebServer();
-    server->init_log( true, "/home/ubuntu/web_server/doc", "1.log", 256  );
+    server->init_log( true, "/home/ubuntu/web_server/doc", "1.log", 1024  );
+    server->init();
     server->init_thread_pool(1,10000);
     server->start_listen("0.0.0.0",22222);
     server->eventLoop();

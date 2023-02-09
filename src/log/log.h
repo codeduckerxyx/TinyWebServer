@@ -14,23 +14,23 @@
 
 class Log{
     public:
-        enum LOGLEVEL
-        {   
-            LOG_LEVEL_NONE=0,       // do not log
-            LOG_LEVEL_ERROR,        // error
-            LOG_LEVEL_WARNING,      // warning
-            LOG_LEVEL_INFO,         // info	
-            LOG_LEVEL_DEBUG,        // debug
-            LOG_LEVEL_TRACE         // detailed information
-        };
+        // enum LOGLEVEL
+        // {   
+        //     LOG_LEVEL_NONE=0,       // do not log
+        //     LOG_LEVEL_ERROR,        // error
+        //     LOG_LEVEL_WARNING,      // warning
+        //     LOG_LEVEL_INFO,         // info	
+        //     LOG_LEVEL_DEBUG,        // debug
+        //     LOG_LEVEL_TRACE         // detailed information
+        // };
         enum LOGTARGET
         {
             LOG_TARGET_NONE=0,
             LOG_TARGET_CONSOLE,
             LOG_TARGET_FILE
         };
+        bool m_log_stop;
     private:
-        
         typedef struct
         {
             char* ptr;
@@ -48,7 +48,7 @@ class Log{
         int log_fp;
         sem task_sem;
         pthread_t tid;
-        bool m_log_stop;
+
     private:
         Log();
         void run_log();
@@ -56,7 +56,7 @@ class Log{
     public:
         virtual ~Log();
         pthread_t get_pid();
-        void write_log(LOGLEVEL level,const char *format, ...); //异步写函数
+        void write_log(int level,const char *format, ...); //异步写函数
         void open_log();
         void close_log();
         //C++11后，使用局部变量懒汉不用加锁
@@ -68,34 +68,17 @@ class Log{
         static void init(const char* dirname,const char *logname, int thread_number, int buf_size );
 };
 
-#ifdef PRINTF_ERROR
-    #define LOG_ERROR(format, ...) if( ! Log::get_instance()->m_log_stop ) {Log::get_instance()->write_log(LOG_LEVEL_ERROR,format, ##__VA_ARGS__);}
-#else
-    #define LOG_ERROR(format, ...)  
-#endif
+#define LOG_LEVEL_NONE 0        // do not log
+#define LOG_LEVEL_ERROR 1       // error
+#define LOG_LEVEL_WARNING 2     // warning
+#define LOG_LEVEL_INFO 4        // info	
+#define LOG_LEVEL_DEBUG 8       // debug
+#define LOG_LEVEL_TRACE 16
 
-#ifdef PRINTF_WARNING
-    #define LOG_WARN(format, ...) if( ! Log::get_instance()->m_log_stop ) {Log::get_instance()->write_log(LOG_LEVEL_WARNING, format, ##__VA_ARGS__);}
-#else
-    #define LOG_WARN(format, ...)  
-#endif
-
-#ifdef PRINTF_INFO
-    #define LOG_INFO(format, ...) if( ! Log::get_instance()->m_log_stop ) {Log::get_instance()->write_log(LOG_LEVEL_INFO, format, ##__VA_ARGS__);}
-#else
-    #define LOG_INFO(format, ...)  
-#endif
-
-#ifdef PRINTF_DEBUG
-    #define LOG_DEBUG(format, ...) if( ! Log::get_instance()->m_log_stop ) {Log::get_instance()->write_log(LOG_LEVEL_DEBUG, format, ##__VA_ARGS__);}
-#else
-    #define LOG_DEBUG(format, ...)  
-#endif
-
-#ifdef PRINTF_TRACE
-    #define LOG_TRACE(format, ...) if( ! Log::get_instance()->m_log_stop ) {Log::get_instance()->write_log(LOG_LEVEL_TRACE, format, ##__VA_ARGS__);}
-#else
-    #define LOG_TRACE(format, ...)  
-#endif 
+#define LOG_ERROR(format, ...) if( ! Log::get_instance()->m_log_stop ) {Log::get_instance()->write_log(LOG_LEVEL_ERROR,format, ##__VA_ARGS__);}
+#define LOG_WARN(format, ...) if( ! Log::get_instance()->m_log_stop ) {Log::get_instance()->write_log(LOG_LEVEL_WARNING, format, ##__VA_ARGS__);}
+#define LOG_INFO(format, ...) if( ! Log::get_instance()->m_log_stop ) {Log::get_instance()->write_log(LOG_LEVEL_INFO, format, ##__VA_ARGS__);}
+#define LOG_DEBUG(format, ...) if( ! Log::get_instance()->m_log_stop ) {Log::get_instance()->write_log(LOG_LEVEL_DEBUG, format, ##__VA_ARGS__);}
+#define LOG_TRACE(format, ...) if( ! Log::get_instance()->m_log_stop ) {Log::get_instance()->write_log(LOG_LEVEL_TRACE, format, ##__VA_ARGS__);}
 
 #endif

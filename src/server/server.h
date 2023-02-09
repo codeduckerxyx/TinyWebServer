@@ -31,7 +31,7 @@ class WebServer{
     
         void init();
         void init_thread_pool( int thread_number, int max_requests );
-        void init_log( bool log_stop, const char* dirname, const char *logname, int log_bufsize);
+        void init_log( bool log_open, const char* dirname, const char *logname, int log_bufsize);
         void init_timer();
         void start_listen( const char* ip, int port  );
         void eventLoop();

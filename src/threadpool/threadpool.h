@@ -7,6 +7,7 @@
 #include <pthread.h>
 
 #include "../lock/lock.h"
+#include "../log/log.h"
 
 /* 线程池类，定义为模板类 */
 template< typename T >
@@ -37,27 +38,31 @@ threadpool< T >::threadpool( int thread_number, int max_requests ) : m_thread_nu
 {
     if( ( thread_number <= 0 ) || ( max_requests <= 0 ) )
     {
+        LOG_ERROR("thread_number shoud be > 0 and max_requests shoud be > 0");
         throw std::exception();
     }
 
     m_threads = new pthread_t[ m_thread_number ];
     if( ! m_threads )
     {
+        LOG_ERROR("m_threads new failed");
         throw std::exception();
     }
 
     /* 创建thread_number个线程，并将它们都设置为脱离线程 */
     for( int i = 0; i < thread_number; ++i )
     {
-        printf( "create the %dth thread\n", i );
+        LOG_INFO( "create the %dth thread", i );
         if( pthread_create( m_threads + i, NULL, worker, this ) != 0 )
         {
             delete [] m_threads;
+            LOG_ERROR("pthread_create failed");
             throw std::exception();
         }
         if( pthread_detach( m_threads[i] ) )
         {
             delete [] m_threads;
+            LOG_ERROR("pthread_detach failed");
             throw std::exception();
         }
     }

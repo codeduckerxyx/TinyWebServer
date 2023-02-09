@@ -28,7 +28,7 @@ Log::~Log()
     }
 }
 
-void Log::write_log(LOGLEVEL level,const char *format, ...)
+void Log::write_log(int level,const char *format, ...)
 {
     
     int log_buf_size = log_bufsize;
@@ -36,7 +36,7 @@ void Log::write_log(LOGLEVEL level,const char *format, ...)
     char* log_buf;
 
     log_mutex.lock();
-    log_buf_queue.front();
+    log_buf = log_buf_queue.front();
     log_buf_queue.pop_front();
     log_mutex.unlock();
 
@@ -91,9 +91,10 @@ void Log::write_log(LOGLEVEL level,const char *format, ...)
 
     if( len >= log_buf_size - log_write_idx )
     {
-        throw std::exception(); //字符缓冲区太小
+        log_write_idx = log_buf_size;
+    }else{
+        log_write_idx += len;
     }
-    log_write_idx += len;
 
     va_list valst;
     va_start(valst, format);
@@ -102,9 +103,11 @@ void Log::write_log(LOGLEVEL level,const char *format, ...)
 
     if( len >= log_buf_size - log_write_idx )
     {
-        throw std::exception(); //字符缓冲区太小
+        log_write_idx = log_buf_size;
+    }else{
+        log_write_idx += len;
     }
-    log_write_idx += len;
+    
     
     char* line_log = new char[ log_write_idx + 1 ];
     strncpy( line_log, log_buf, log_write_idx );
@@ -163,6 +166,7 @@ void* Log::worker(void* arg)
 
 void Log::init(const char* dirname,const char *logname, int thread_number, int buf_size ){
     Log* m_log = get_instance();
+    m_log->log_bufsize = buf_size;
     strcpy( m_log->dir_name,dirname );
     strcpy( m_log->log_name,logname );
 

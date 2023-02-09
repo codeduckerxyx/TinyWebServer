@@ -24,6 +24,7 @@ void http_conn::close_conn( bool real_close )
         Utils::removefd( m_epollfd, m_sockfd );
         m_sockfd = -1;
         m_user_count--;
+        LOG_TRACE( "ip %s:%d disconnect", inet_ntoa(m_address.sin_addr),m_address.sin_port );
     }
 }
 
@@ -38,8 +39,9 @@ void http_conn::init( int sockfd, const sockaddr_in& addr )
     setsockopt( m_sockfd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof( reuse ) );
     Utils::addfd( m_epollfd, sockfd, true );
     m_user_count++;
-
+    
     init();
+    LOG_TRACE( "ip %s:%d connect", inet_ntoa(m_address.sin_addr),m_address.sin_port );
 }
 
 void http_conn::init()

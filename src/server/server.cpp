@@ -2,12 +2,7 @@
 
 WebServer::WebServer()
 {
-    users = new http_conn[ MAX_FD ];
-    events = new epoll_event[ MAX_EVENT_NUMBER ];
-    signals = new char[1024];
-    assert( users );
-    assert( events );
-    m_stop_server = false;
+    
 }
 
 WebServer::~WebServer()
@@ -21,7 +16,19 @@ WebServer::~WebServer()
 }
 
 void WebServer::init(){
+    users = new http_conn[ MAX_FD ];
+    LOG_ERROR("user new failed");
+    assert( users );
 
+    events = new epoll_event[ MAX_EVENT_NUMBER ];
+    LOG_ERROR("events new failed");
+    assert( events );
+
+    signals = new char[1024];
+    LOG_ERROR("signals new failed");
+    assert( signals );
+    
+    m_stop_server = false;
 }
 
 
@@ -34,14 +41,16 @@ void WebServer::init_thread_pool( int thread_number, int max_requests )
     }
     catch( ... )
     {
+        LOG_ERROR("Thread pool initialization failed");
         throw std::exception();
     }
+    LOG_INFO("Thread pool initialization succeeded");
 }
 
 
-void WebServer::init_log( bool log_stop, const char* dirname, const char* logname, int log_bufsize)
+void WebServer::init_log( bool log_open, const char* dirname, const char* logname, int log_bufsize)
 {
-    m_log_stop = log_stop;
+    m_log_stop = (!log_open);
     if( m_log_stop == false ){
         Log::init( dirname, logname,m_thread_num+1,log_bufsize );
         Log::get_instance()->open_log();
@@ -58,7 +67,7 @@ void WebServer::deal_client_connection_handler(){
     int connfd = accept( listenfd, ( struct sockaddr* )&client_address, &client_addrlength );
     if ( connfd < 0 )
     {
-        printf( "errno is: %d\n", errno );
+        LOG_INFO( "accept failed errno is %d", errno );
         return;
     }
     if( http_conn::m_user_count >= MAX_FD )
@@ -136,6 +145,8 @@ void WebServer::eventLoop(){
     Utils::addsig(SIGPIPE, SIG_IGN);
     //utils.addsig(SIGALRM, Utils::sig_handler, false);
     Utils::addsig(SIGTERM, Utils::sig_handler, false);
+
+    LOG_INFO("Server started successfully");
 
     while( ! m_stop_server )
     {

@@ -20,6 +20,7 @@
 #include <errno.h>
 #include "../lock/lock.h"
 #include "../utils/utils.h"
+#include "../log/log.h"
 
 class http_conn
 {
