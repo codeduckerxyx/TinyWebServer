@@ -183,19 +183,18 @@ void WebServer::eventLoop(){
             else if( events[i].events & ( EPOLLRDHUP | EPOLLHUP | EPOLLERR ) )
             {
                 users[sockfd].close_conn();
-                //移除对应定时器
+            }
+            else if( ( sockfd != utils.sig_pipefd[0] ) && events[i].events & EPOLLIN )
+            {
+                deal_recvdata_handler( sockfd );
+            }
+            else if( ( sockfd != utils.sig_pipefd[0] ) && events[i].events & EPOLLOUT )
+            {
+                deal_senddata_handler( sockfd );
             }
             else if( ( sockfd == utils.sig_pipefd[0] ) && events[i].events & EPOLLIN )
             {
                 deal_sigal_handler();
-            }
-            else if( events[i].events & EPOLLIN )
-            {
-                deal_recvdata_handler( sockfd );
-            }
-            else if( events[i].events & EPOLLOUT )
-            {
-                deal_senddata_handler( sockfd );
             }
             else
             {}
