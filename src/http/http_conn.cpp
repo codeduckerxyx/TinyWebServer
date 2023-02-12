@@ -158,11 +158,16 @@ http_conn::HTTP_CODE http_conn::parse_request_line( char* text )
     {
         m_method = GET;
     }
+    else if( strcasecmp( method, "HEAD" ) == 0 )
+    {
+        m_method = HEAD;
+    }
     else
     {
         return BAD_REQUEST;
     }
 
+    /* 获取HTTP协议版本 */
     m_url += strspn( m_url, " \t" );
     m_version = strpbrk( m_url, " \t" );
     if ( ! m_version )
@@ -231,7 +236,7 @@ http_conn::HTTP_CODE http_conn::parse_headers( char* text )
     }
     else
     {
-        printf( "oop! unknow header %s\n", text );
+        // LOG_TRACE( "unknow header %s", text );
     }
 
     return NO_REQUEST;
@@ -260,7 +265,7 @@ http_conn::HTTP_CODE http_conn::process_read()
     {
         text = get_line();
         m_start_line = m_checked_idx;
-        printf( "got 1 http line: %s\n", text );
+        LOG_TRACE( "got 1 http line: %s", text );
 
         switch ( m_check_state )
         {
@@ -332,10 +337,17 @@ http_conn::HTTP_CODE http_conn::do_request()
     {
         return BAD_REQUEST;
     }
-
-    int fd = open( m_real_file, O_RDONLY );
-    m_file_address = ( char* )mmap( 0, m_file_stat.st_size, PROT_READ, MAP_PRIVATE, fd, 0 );
-    close( fd );
+    if( m_method == GET )
+    {
+        int fd = open( m_real_file, O_RDONLY );
+        m_file_address = ( char* )mmap( 0, m_file_stat.st_size, PROT_READ, MAP_PRIVATE, fd, 0 );
+        close( fd );
+        return FILE_REQUEST;
+    }
+    else if( m_method == HEAD )
+    {
+        return FILE_REQUEST;
+    }
     return FILE_REQUEST;
 }
 
@@ -516,9 +528,16 @@ bool http_conn::process_write( HTTP_CODE ret )
                 add_headers( m_file_stat.st_size );
                 m_iv[ 0 ].iov_base = m_write_buf;
                 m_iv[ 0 ].iov_len = m_write_idx;
-                m_iv[ 1 ].iov_base = m_file_address;
-                m_iv[ 1 ].iov_len = m_file_stat.st_size;
-                m_iv_count = 2;
+                if( m_method == GET )
+                {
+                    m_iv[ 1 ].iov_base = m_file_address;
+                    m_iv[ 1 ].iov_len = m_file_stat.st_size;
+                    m_iv_count = 2;
+                }
+                else
+                {
+                    m_iv_count = 1;
+                }
                 return true;
             }
             else
