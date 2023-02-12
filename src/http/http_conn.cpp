@@ -346,6 +346,7 @@ http_conn::HTTP_CODE http_conn::do_request()
     }
     else if( m_method == HEAD )
     {
+        m_file_address = NULL;
         return FILE_REQUEST;
     }
     return FILE_REQUEST;
