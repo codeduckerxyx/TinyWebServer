@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <cassert>
 #include <sys/epoll.h>
+#include <memory>
 
 #include "server/server.h"
 
@@ -17,12 +18,11 @@
 
 int main()
 {
-    WebServer* server = new WebServer();
+    std::unique_ptr<WebServer> server = std::make_unique<WebServer>();
     server->init_log( true, "/home/ubuntu/web_server/doc", "1.log", 1024  );
     server->init();
     server->init_thread_pool(1,10000);
     server->start_listen("0.0.0.0",22222);
     server->eventLoop();
-    delete server;
     return 0;
 }

@@ -40,20 +40,20 @@ class WebServer{
         int listenfd;
         Utils utils;
         bool m_stop_server;
-        char* signals;
+        char* signals =nullptr ;
 
         /* 日志 */
         bool m_log_stop;
         
         /* 客户数据 */
-        http_conn* users;
+        http_conn* users = nullptr;
 
         /* 线程池 */
-        threadpool< http_conn >* pool;
+        threadpool< http_conn >* pool = nullptr;
         int m_thread_num;
 
         /* io复用 */
-        epoll_event* events;
+        epoll_event* events = nullptr;
 
         /* 定时器 */
         timer_set timer;

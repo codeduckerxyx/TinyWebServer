@@ -7,22 +7,22 @@ WebServer::~WebServer()
     delete [] users;
     delete [] events;
     delete [] signals;
-    if( pool!=NULL ){
+    if( pool!=nullptr ){
         delete pool;
     }
 }
 
 void WebServer::init(){
     users = new http_conn[ MAX_FD ];
-    assert( users );
+    assert( users!=nullptr );
     http_conn::timeslot = TIMESLOT;
     http_conn::timer = &timer;
 
     events = new epoll_event[ MAX_EVENT_NUMBER ];
-    assert( events );
+    assert( events!=nullptr );
 
     signals = new char[1024];
-    assert( signals );
+    assert( signals!=nullptr );
     
     m_stop_server = false;
 }
@@ -96,10 +96,10 @@ void WebServer::deal_sigal_handler(){
             }
         }
         if( is_sigalrm ){
-            LOG_INFO("start tick");
+            LOG_TRACE("start tick");
             timer.tick();
             alarm(TIMESLOT);
-            LOG_INFO("end tick");
+            LOG_TRACE("end tick");
         }
     }
 }
@@ -168,7 +168,7 @@ void WebServer::eventLoop(){
         int number = epoll_wait( epollfd, events, MAX_EVENT_NUMBER, -1 );
         if ( ( number < 0 ) && ( errno != EINTR ) )
         {
-            printf( "epoll failure\n" );
+            LOG_ERROR("epoll failure");
             break;
         }
 

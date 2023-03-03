@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <exception>
 #include <pthread.h>
+#include <memory>
 
 #include "../lock/lock.h"
 #include "../log/log.h"
@@ -26,7 +27,7 @@ private:
 private:
     int m_thread_number;    /*线程池中的线程数*/
     int m_max_requests;     /* 请求队列中允许的最大请求数 */
-    pthread_t* m_threads;  /* 线程池数组，大小为 m_thread_number */
+    std::unique_ptr<pthread_t[]> m_threads;   /* 线程池数组，大小为 m_thread_number */
     std::list< T* > m_workqueue;    /* 请求队列 */
     locker m_queuelocker;   /* 保护请求队列的互斥锁 */
     sem m_queuestat;        /* 是否有任务需要处理 */
@@ -34,7 +35,7 @@ private:
 };
 
 template< typename T >
-threadpool< T >::threadpool( int thread_number, int max_requests ) : m_thread_number( thread_number ), m_max_requests( max_requests ), m_stop( false ), m_threads( NULL )
+threadpool< T >::threadpool( int thread_number, int max_requests ) : m_thread_number( thread_number ), m_max_requests( max_requests ), m_stop( false ), m_threads( nullptr )
 {
     if( ( thread_number <= 0 ) || ( max_requests <= 0 ) )
     {
@@ -42,8 +43,8 @@ threadpool< T >::threadpool( int thread_number, int max_requests ) : m_thread_nu
         throw std::exception();
     }
 
-    m_threads = new pthread_t[ m_thread_number ];
-    if( ! m_threads )
+    m_threads.reset( new pthread_t[thread_number] );
+    if( m_threads == nullptr )
     {
         LOG_ERROR("m_threads new failed");
         throw std::exception();
@@ -53,15 +54,13 @@ threadpool< T >::threadpool( int thread_number, int max_requests ) : m_thread_nu
     for( int i = 0; i < thread_number; ++i )
     {
         LOG_INFO( "create the %dth thread", i );
-        if( pthread_create( m_threads + i, NULL, worker, this ) != 0 )
+        if( pthread_create( m_threads.get() + i, NULL, worker, this ) != 0 )
         {
-            delete [] m_threads;
             LOG_ERROR("pthread_create failed");
             throw std::exception();
         }
         if( pthread_detach( m_threads[i] ) )
         {
-            delete [] m_threads;
             LOG_ERROR("pthread_detach failed");
             throw std::exception();
         }
@@ -71,7 +70,6 @@ threadpool< T >::threadpool( int thread_number, int max_requests ) : m_thread_nu
 template< typename T >
 threadpool< T >::~threadpool()
 {
-    delete [] m_threads;
     m_stop = true;
 }
 
@@ -111,7 +109,7 @@ void threadpool< T >::run()
         T* request = m_workqueue.front();
         m_workqueue.pop_front();
         m_queuelocker.unlock();
-        if( ! request ){
+        if( request == nullptr ){
             continue;
         }
         request->process();

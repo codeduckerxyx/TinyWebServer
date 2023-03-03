@@ -4,6 +4,7 @@
 #include <stdarg.h>
 #include <pthread.h>
 #include <exception>
+#include <memory>
 
 #include "../lock/lock.h"
 #include "log.h"
@@ -162,6 +163,7 @@ pthread_t Log::get_pid()
 void* Log::worker(void* arg)
 {
     get_instance()->run_log();
+    return get_instance();
 }
 
 void Log::init(const char* dirname,const char *logname, int thread_number, int buf_size ){
@@ -170,19 +172,18 @@ void Log::init(const char* dirname,const char *logname, int thread_number, int b
     strcpy( m_log->dir_name,dirname );
     strcpy( m_log->log_name,logname );
 
-    char* full_name = new char[ strlen( dirname ) + strlen( logname ) + 2 ];
+    std::unique_ptr<char[]> full_name( new char[ strlen( dirname ) + strlen( logname ) + 2 ] );
 
-    strcpy( full_name,dirname );
+    strcpy( full_name.get(),dirname );
     full_name[ strlen( dirname ) ] = '/';
-    strcpy( full_name + strlen(dirname) + 1 ,logname );
+    strcpy( full_name.get() + strlen(dirname) + 1 ,logname );
     full_name[ strlen( dirname ) + strlen( logname ) + 1 ] = '\0';
 
     if( m_log->log_fp != -1 ){
         close( m_log->log_fp );
     }
 
-    m_log->log_fp = open( full_name, O_APPEND | O_CREAT | O_WRONLY );
-    delete [] full_name;
+    m_log->log_fp = open( full_name.get(), O_APPEND | O_CREAT | O_WRONLY );
     
     for( int i = 0; i< thread_number ; ++i ){
         char* log_buf = new char[buf_size];
