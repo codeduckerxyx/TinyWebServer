@@ -82,7 +82,7 @@ class timer_set
             time_t cur = time( NULL );
 
             for(auto x:set){
-                LOG_TRACE("%d %d",x->timer_id,x->expire );
+                //LOG_TRACE("%d %d",x->timer_id,x->expire );
             }
 
             while( !set.empty() ){

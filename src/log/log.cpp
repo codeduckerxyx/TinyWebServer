@@ -9,37 +9,33 @@
 #include "../lock/lock.h"
 #include "log.h"
 
-Log::Log()
-{
+Log::Log(){
     m_log_stop = true;
     log_fp = -1;
     log_bufsize = 0;
+    m_timer = nullptr;
 }
 
-Log::~Log()
-{
+Log::~Log(){
     if( log_fp != -1 ){
         close( log_fp );
     }
-    for(auto i:task_queue){
-        delete [] i.ptr;
-    }
-    for(auto i:log_buf_queue){
-        delete [] i;
+    if( m_timer!=nullptr ){
+        delete m_timer;
+        m_timer = nullptr;
     }
 }
 
-void Log::write_log(int level,const char *format, ...)
-{
+void Log::write_log(int level,const char *format, ...){
     
     int log_buf_size = log_bufsize;
     int log_write_idx = 0;  //日志写缓冲坐标偏移
-    char* log_buf;
 
-    log_mutex.lock();
-    log_buf = log_buf_queue.front();
+    log_tem_mutex.lock();
+    std::unique_ptr<char[]> log_buf_ptr = std::move( log_buf_queue.front() );
+    char *log_buf = log_buf_ptr.get();
     log_buf_queue.pop_front();
-    log_mutex.unlock();
+    log_tem_mutex.unlock();
 
     switch(level)
     {
@@ -108,36 +104,47 @@ void Log::write_log(int level,const char *format, ...)
     }else{
         log_write_idx += len;
     }
-    
-    
-    char* line_log = new char[ log_write_idx + 1 ];
-    strncpy( line_log, log_buf, log_write_idx );
-    line_log[ log_write_idx ] = '\n';
 
-    log_mutex.lock();
-    log_buf_queue.push_front( log_buf );
-    log_mutex.unlock();
+    io_mutex.lock();
+    while(1){
+        if( log_write_idx + 1 <= io_buf_size - io_buf_idx[now]  ){
+            strncpy( io_buf[now].get() + io_buf_idx[now], log_buf, log_write_idx );
+            io_buf_idx[now] += log_write_idx ;
+            io_buf[now][ io_buf_idx[now]++ ] = '\n';
+            break;
+        }else{
+            io_sem.post();
+            log_sem.wait();
+        }
+    }
+    io_mutex.unlock();
 
-    task_mutex.lock();
-    task_queue.push_back( task_node{ line_log, log_write_idx + 1 } );
-    task_mutex.unlock();
-    task_sem.post();
+    log_tem_mutex.lock();
+    log_buf_queue.push_front( std::move( log_buf_ptr ) );
+    log_tem_mutex.unlock();
+
+}
+
+void Log::io_timer(){
+    io_mutex.lock();
+    io_sem.post();
+    log_sem.wait();
+    io_mutex.unlock();
+
+    time_t newtime = time(NULL) + 5;
+    timer->adjust_timer( m_timer, newtime );
 }
 
 void Log::run_log()
 {
     while( ! m_log_stop )
     {
-        task_sem.wait();
-        task_mutex.lock();
-
-        task_node tem = task_queue.front();
-        task_queue.pop_front();
-        
-        task_mutex.unlock();
-
-        write( log_fp, tem.ptr, tem.size );
-        delete [] tem.ptr;
+        io_sem.wait();
+        int last = now;
+        now = (now+1)%2;
+        log_sem.post();
+        write( log_fp, io_buf[last].get(), io_buf_idx[last] );
+        io_buf_idx[last] = 0;
     }
 }
 
@@ -147,6 +154,10 @@ void Log::open_log()
     pthread_create( &tid, NULL, Log::worker, NULL );
     pthread_detach( tid );
     m_log_stop = false;
+    
+    m_timer->timer_id = -1;
+    m_timer->expire = time(NULL) + 5;
+    timer->add_timer( m_timer );
 }
 
 void Log::close_log()
@@ -166,8 +177,13 @@ void* Log::worker(void* arg)
     return get_instance();
 }
 
-void Log::init(const char* dirname,const char *logname, int thread_number, int buf_size ){
+void Log::init(const char* dirname,const char *logname, int thread_number, int buf_size, timer_set* timer_tem  ){
     Log* m_log = get_instance();
+
+    m_log->timer = timer_tem;
+    m_log->m_timer = new log_timer;
+    m_log->m_timer->ptr = m_log;
+
     m_log->log_bufsize = buf_size;
     strcpy( m_log->dir_name,dirname );
     strcpy( m_log->log_name,logname );
@@ -186,9 +202,14 @@ void Log::init(const char* dirname,const char *logname, int thread_number, int b
     m_log->log_fp = open( full_name.get(), O_APPEND | O_CREAT | O_WRONLY );
     
     for( int i = 0; i< thread_number ; ++i ){
-        char* log_buf = new char[buf_size];
-        m_log->log_buf_queue.push_back( log_buf );
+        std::unique_ptr<char []> ptr( new char[buf_size] );
+        m_log->log_buf_queue.push_back( std::move( ptr ) );
     }
-    
+
+    m_log->io_buf[0].reset( new char[524288] );
+    m_log->io_buf[1].reset( new char[524288] );
+    m_log->io_buf_idx[0] = 0;
+    m_log->io_buf_idx[1] = 0;
+    m_log->io_buf_size = 524288;
 }
 

@@ -48,7 +48,7 @@ void WebServer::init_log( bool log_open, const char* dirname, const char* lognam
 {
     m_log_stop = (!log_open);
     if( m_log_stop == false ){
-        Log::init( dirname, logname,m_thread_num+1,log_bufsize );
+        Log::init( dirname, logname,m_thread_num+1,log_bufsize,&timer );
         Log::get_instance()->open_log();
     }
 }
